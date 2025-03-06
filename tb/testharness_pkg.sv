@@ -31,7 +31,7 @@ package testharness_pkg;
   };
 
   //slave encoder
-  localparam EXT_NPERIPHERALS = 5;
+  localparam EXT_NPERIPHERALS = 6;
 
   // Memcopy controller (external peripheral example)
   localparam logic [31:0] MEMCOPY_CTRL_START_ADDRESS = core_v_mini_mcu_pkg::EXT_PERIPHERAL_START_ADDRESS + 32'h0;
@@ -63,24 +63,19 @@ package testharness_pkg;
   localparam logic [31:0] IM2COL_SPC_END_ADDRESS = IM2COL_SPC_START_ADDRESS + IM2COL_SPC_SIZE;
   localparam logic [31:0] IM2COL_SPC_IDX = 32'd4;
 
+  // SPECSITF Peripheral
+  localparam logic [31:0] SPECSITF_START_ADDRESS = core_v_mini_mcu_pkg::EXT_PERIPHERAL_START_ADDRESS + 32'h05000;
+  localparam logic [31:0] SPECSITF_SIZE = 32'h100;
+  localparam logic [31:0] SPECSITF_END_ADDRESS = SPECSITF_START_ADDRESS + SPECSITF_SIZE;
+  localparam logic [31:0] SPECSITF_IDX = 32'd5;
+
   localparam addr_map_rule_t [EXT_NPERIPHERALS-1:0] EXT_PERIPHERALS_ADDR_RULES = '{
-      '{
-          idx: MEMCOPY_CTRL_IDX,
-          start_addr: MEMCOPY_CTRL_START_ADDRESS,
-          end_addr: MEMCOPY_CTRL_END_ADDRESS
-      },
+      '{idx: MEMCOPY_CTRL_IDX, start_addr: MEMCOPY_CTRL_START_ADDRESS, end_addr: MEMCOPY_CTRL_END_ADDRESS},
       '{idx: AMS_IDX, start_addr: AMS_START_ADDRESS, end_addr: AMS_END_ADDRESS},
       '{idx: IFFIFO_IDX, start_addr: IFFIFO_START_ADDRESS, end_addr: IFFIFO_END_ADDRESS},
-      '{
-          idx: SIMPLE_ACC_IDX,
-          start_addr: SIMPLE_ACC_START_ADDRESS,
-          end_addr: SIMPLE_ACC_END_ADDRESS
-      },
-      '{
-          idx: IM2COL_SPC_IDX,
-          start_addr: IM2COL_SPC_START_ADDRESS,
-          end_addr: IM2COL_SPC_END_ADDRESS
-      }
+      '{idx: SIMPLE_ACC_IDX, start_addr: SIMPLE_ACC_START_ADDRESS, end_addr: SIMPLE_ACC_END_ADDRESS},
+      '{idx: IM2COL_SPC_IDX, start_addr: IM2COL_SPC_START_ADDRESS, end_addr: IM2COL_SPC_END_ADDRESS},
+      '{idx: SPECSITF_IDX, start_addr: SPECSITF_START_ADDRESS, end_addr: SPECSITF_END_ADDRESS}
   };
 
   localparam int unsigned EXT_PERIPHERALS_PORT_SEL_WIDTH = EXT_NPERIPHERALS > 1 ? $clog2(
