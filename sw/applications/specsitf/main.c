@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
   printf("hello world sw!\n");
 
   volatile static uint32_t *specs_cmem_ptr = (SPECS_PERIPH_START_ADDRESS);
-  specs_cmem_ptr[0] = 0x01;
+  specs_cmem_ptr[0] = 0x02;
 
   return EXIT_SUCCESS;
 }

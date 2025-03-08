@@ -9,9 +9,9 @@
 extern "C" {
 #endif
 
-void  test_specsitf(int data);
+void test_specsitf(int data);
 
 #ifdef __cplusplus
 }
 #endif
-#endif  // SPECSITF_DPI_H_
+#endif // SPECSITF_DPI_H_

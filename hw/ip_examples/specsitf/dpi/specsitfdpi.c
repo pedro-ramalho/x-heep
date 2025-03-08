@@ -17,5 +17,17 @@
 #include <unistd.h>*/
 
 void test_specsitf(int data) {
-  printf("hello %d\n", data);
+  printf("Writing to file.\n");
+
+  FILE *file = fopen("/home/pedro-ramalho/peripheral_output.txt", "a");
+
+  if (file == NULL) {
+    fprintf(stderr, "Error: could not open file for writing.\n");
+
+    return;
+  }
+
+  fprintf(file, "Hello %d\n", data);
+
+  fclose(file);
 }
