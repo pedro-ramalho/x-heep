@@ -70,11 +70,23 @@ package testharness_pkg;
   localparam logic [31:0] SPECSITF_IDX = 32'd5;
 
   localparam addr_map_rule_t [EXT_NPERIPHERALS-1:0] EXT_PERIPHERALS_ADDR_RULES = '{
-      '{idx: MEMCOPY_CTRL_IDX, start_addr: MEMCOPY_CTRL_START_ADDRESS, end_addr: MEMCOPY_CTRL_END_ADDRESS},
+      '{
+          idx: MEMCOPY_CTRL_IDX,
+          start_addr: MEMCOPY_CTRL_START_ADDRESS,
+          end_addr: MEMCOPY_CTRL_END_ADDRESS
+      },
       '{idx: AMS_IDX, start_addr: AMS_START_ADDRESS, end_addr: AMS_END_ADDRESS},
       '{idx: IFFIFO_IDX, start_addr: IFFIFO_START_ADDRESS, end_addr: IFFIFO_END_ADDRESS},
-      '{idx: SIMPLE_ACC_IDX, start_addr: SIMPLE_ACC_START_ADDRESS, end_addr: SIMPLE_ACC_END_ADDRESS},
-      '{idx: IM2COL_SPC_IDX, start_addr: IM2COL_SPC_START_ADDRESS, end_addr: IM2COL_SPC_END_ADDRESS},
+      '{
+          idx: SIMPLE_ACC_IDX,
+          start_addr: SIMPLE_ACC_START_ADDRESS,
+          end_addr: SIMPLE_ACC_END_ADDRESS
+      },
+      '{
+          idx: IM2COL_SPC_IDX,
+          start_addr: IM2COL_SPC_START_ADDRESS,
+          end_addr: IM2COL_SPC_END_ADDRESS
+      },
       '{idx: SPECSITF_IDX, start_addr: SPECSITF_START_ADDRESS, end_addr: SPECSITF_END_ADDRESS}
   };
 

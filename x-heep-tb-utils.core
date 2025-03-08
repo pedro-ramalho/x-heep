@@ -18,6 +18,7 @@ filesets:
     - example:ip:i2s_microphone
     - example:ip:simple_accelerator
     - example:ip:im2col_spc
+    - example:ip:specsitf
     files:
     file_type: systemVerilogSource
 
@@ -28,6 +29,7 @@ filesets:
     - hw/ip_examples/iffifo/iffifo.vlt
     - hw/ip_examples/simple_accelerator/simple_accelerator.vlt
     - hw/ip_examples/im2col_spc/im2col_spc.vlt
+    - hw/ip_examples/specsitf/specsitf.vlt
     - tb/tb.vlt
     file_type: vlt
 
@@ -49,6 +51,10 @@ filesets:
   uartdpi:
     depend:
     - lowrisc:dv_dpi:uartdpi
+  
+  specsitfdpi:
+    depend:
+      - example:ip:specsitfdpi:0.1
 
   systemverilog_only_uart:
     files:
@@ -84,6 +90,7 @@ targets:
     - files_examples
     - tb-harness
     - tool_verilator? (uartdpi)
+    - tool_verilator? (specsitfdpi)
     - tool_modelsim? (systemverilog_only_uart)
     - tool_vcs? (systemverilog_only_uart)
     - tool_xcelium? (systemverilog_only_uart)
