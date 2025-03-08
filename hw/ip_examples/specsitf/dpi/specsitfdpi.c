@@ -1,3 +1,4 @@
+#include <zmq.h>
 
 #include "specsitfdpi.h"
 
@@ -12,22 +13,58 @@
 #include <fcntl.h>
 #include <stdbool.h>*/
 #include <stdio.h>
+#include <cstring>
 /*#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>*/
 
+
 void test_specsitf(int data) {
-  printf("Writing to file.\n");
+  printf("Hello %d\n", data);
 
-  FILE *file = fopen("/home/pedro-ramalho/peripheral_output.txt", "a");
-
-  if (file == NULL) {
-    fprintf(stderr, "Error: could not open file for writing.\n");
+  void *context = zmq_ctx_new();
+  if (!context) {
+    fprintf(stderr, "Failed to create ZMQ context.\n");
 
     return;
   }
 
-  fprintf(file, "Hello %d\n", data);
+  void *socket = zmq_socket(context, ZMQ_REP);
+  if (!socket) {
+    fprintf(stderr, "Failed to create ZMQ socket.\n");
 
-  fclose(file);
+    zmq_ctx_destroy(context);
+
+    return;
+  }
+
+  if (zmq_bind(socket, "tcp://*:5555") != 0) {
+    fprintf(stderr, "Failed to bind ZMQ socket.\n");
+
+    zmq_close(socket);
+    zmq_ctx_destroy(context);
+
+    return;
+  }
+
+  printf("Hardware peripheral (REP server) is running and waiting for messages...\n");
+
+  char buffer[256];
+
+  int length = zmq_recv(socket, buffer, sizeof(buffer) - 1, 0);
+
+  if (length == -1) {
+    fprintf(stderr, "Failed to receive message.\n");
+  } else {
+    buffer[length] = '\0';
+
+    printf("Received number: %s\n", buffer);
+
+    const char *reply = "ACK";
+
+    zmq_send(socket, reply, strlen(reply), 0);
+  }
+
+  zmq_close(socket);
+  zmq_ctx_destroy(context);
 }
