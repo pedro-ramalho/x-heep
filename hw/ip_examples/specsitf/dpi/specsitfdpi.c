@@ -1,70 +1,78 @@
+#include "specsitfdpi.h"
+#include <backend/cipc_zmq.h>
+#include <cipc.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <zmq.h>
 
-#include "specsitfdpi.h"
+#define SPECSITF_ADDRESS "tcp://*:5555"                                                     
+#define SPECSITF_BUFFER_SIZE 1024
 
-#ifdef __linux__
-#include <pty.h>
-#elif __APPLE__
-#include <util.h>
-#endif
+static cipc **specsitf_server = NULL;
 
-/*#include <assert.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <stdbool.h>*/
-#include <stdio.h>
-#include <cstring>
-/*#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>*/
-
-
-void test_specsitf(int data) {
-  printf("Hello %d\n", data);
-
-  void *context = zmq_ctx_new();
-  if (!context) {
-    fprintf(stderr, "Failed to create ZMQ context.\n");
-
-    return;
+void specsitf_comm_init() {
+  specsitf_server = (cipc**)malloc(sizeof(cipc*));
+  if (!specsitf_server) {
+    printf("Failed to allocate memory for server!\n");
+    
+    exit(1);
   }
 
-  void *socket = zmq_socket(context, ZMQ_REP);
-  if (!socket) {
-    fprintf(stderr, "Failed to create ZMQ socket.\n");
+  *specsitf_server = cipc_create(CIPC_PROTOCOL_ZMQ);
+  if (!(*specsitf_server)) {
+    printf("Failed to create server!\n");
 
-    zmq_ctx_destroy(context);
-
-    return;
+    exit(1);
   }
 
-  if (zmq_bind(socket, "tcp://*:5555") != 0) {
-    fprintf(stderr, "Failed to bind ZMQ socket.\n");
+  cipc_zmq_config *config = cipc_zmq_config_rep(SPECSITF_ADDRESS);
+  if ((*specsitf_server)->init (&(*specsitf_server)->context, config) != CIPC_OK) {
+    printf("Failed to initialize server!\n");
+    
+    specsitf_comm_free();
 
-    zmq_close(socket);
-    zmq_ctx_destroy(context);
-
-    return;
+    exit(1);
   }
 
-  printf("Hardware peripheral (REP server) is running and waiting for messages...\n");
+  printf("Communication initialized successfully.\n");
+}
 
-  char buffer[256];
 
-  int length = zmq_recv(socket, buffer, sizeof(buffer) - 1, 0);
+void specsitf_comm_free() {
+  if (specsitf_server) {
+    if (*specsitf_server) {
+      cipc_free(*specsitf_server);
+    }
 
-  if (length == -1) {
-    fprintf(stderr, "Failed to receive message.\n");
+    free(specsitf_server);
+    
+    specsitf_server = NULL;
+  }
+}
+
+void specsitf_comm_send(int int_reg_1_i, int int_reg_2_i) {
+  char buffer[SPECSITF_BUFFER_SIZE] = {0};
+  size_t length = snprintf(buffer, sizeof(buffer), "%d %d", int_reg_1_i, int_reg_2_i);
+
+  if ((*specsitf_server)->send( (*specsitf_server)->context, buffer, length) != CIPC_OK) {
+    printf("Failed to send reply!\n");
   } else {
-    buffer[length] = '\0';
-
-    printf("Received number: %s\n", buffer);
-
-    const char *reply = "ACK";
-
-    zmq_send(socket, reply, strlen(reply), 0);
+    printf("Sent: %d %d\n", int_reg_1_i, int_reg_2_i);
   }
+} 
 
-  zmq_close(socket);
-  zmq_ctx_destroy(context);
+void specsitf_comm_recv(int *int_reg_1_o, int *int_reg_2_o) {
+  char buffer[SPECSITF_BUFFER_SIZE] = {0};
+
+  if ((*specsitf_server)->recv( (*specsitf_server)->context, buffer, sizeof(buffer) ) != CIPC_OK) {
+    printf("Failed to receive message!\n");
+  }
+  
+  if (sscanf(buffer, "%d %d", int_reg_1_o, int_reg_2_o) != 2) {
+    printf("Failed to parse received data!\n");
+
+    int_reg_1_o = 0;
+    int_reg_2_o = 0;
+  }
 }

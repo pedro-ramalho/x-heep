@@ -9,7 +9,13 @@
 extern "C" {
 #endif
 
-void test_specsitf(int data);
+void specsitf_comm_init();
+
+void specsitf_comm_free();
+
+void specsitf_comm_send(int int_reg_1_i, int int_reg_2_i);
+
+void specsitf_comm_recv(int *int_reg_1_o, int *int_reg_2_o);
 
 #ifdef __cplusplus
 }
