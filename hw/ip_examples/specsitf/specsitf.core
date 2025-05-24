@@ -1,0 +1,15 @@
+CAPI=2:
+
+name: "example:ip:specsitf"
+description: "core-v-mini-mcu iffifo peripheral"
+
+filesets:
+  files_rtl:
+    files:
+    - specsitf.sv
+    file_type: systemVerilogSource
+
+targets:
+  default:
+    filesets:
+    - files_rtl

@@ -8,9 +8,9 @@
 #include "core_v_mini_mcu.h"
 #include "x-heep.h"
 
-#define TEST_DATA_SIZE      16
+#define TEST_DATA_SIZE      8
 
-#define PRINTF_IN_SIM   0
+#define PRINTF_IN_SIM   1
 
 #if TARGET_SIM && PRINTF_IN_SIM
         #define PRINTF(fmt, ...)    printf(fmt, ## __VA_ARGS__)
@@ -22,7 +22,7 @@
 int32_t errors = 0;
 
 //defined in the testharness_pkg.sv
-#define SIMPLE_ACC_START_ADDRESS EXT_PERIPHERAL_START_ADDRESS + 0x3000;
+#define SIMPLE_ACC_START_ADDRESS EXT_PERIPHERAL_START_ADDRESS + 0x3000
 
 // Simple accelerator Decoder (address for bytes)
 //0 READ ADDRESS
@@ -41,8 +41,7 @@ int32_t errors = 0;
 
 
 int main(int argc, char *argv[])
-{
-
+{   
     static uint32_t source_data[TEST_DATA_SIZE] __attribute__ ((aligned (4)));
     static uint32_t copied_data[TEST_DATA_SIZE] __attribute__ ((aligned (4)));
     uint32_t threshold_value = 20;
@@ -51,7 +50,6 @@ int main(int argc, char *argv[])
 
     for(int i=0;i<TEST_DATA_SIZE;i++)
         source_data[i] = i & 0x1 ? i*3 : i*2;
-
 
     simple_acc[SIMPLE_ACC_READ_OFFSET] = &source_data[0];
     simple_acc[SIMPLE_ACC_WRITE_OFFSET] = &copied_data[0];

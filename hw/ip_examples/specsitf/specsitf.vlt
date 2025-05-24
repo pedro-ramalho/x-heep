@@ -1,0 +1,5 @@
+
+
+`verilator_config
+
+lint_off -rule UNUSED -file "*/specsitf/specsitf.sv" -match "*"
