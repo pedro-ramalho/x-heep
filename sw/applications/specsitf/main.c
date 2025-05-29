@@ -7,34 +7,32 @@
 #include "core_v_mini_mcu.h"
 
 #define SPECSITF_START_ADDRESS (EXT_PERIPHERAL_START_ADDRESS + 0x06000)
-#define SPECSITF_SIZE 0x0100
-#define SPECSITF_END_ADDRESS (SPECSITF_START_ADDRESS + SPECSITF_SIZE)
 
-#define INPUT_REG1 0
-#define INPUT_REG2 1
-#define OUTPUT_REG1 2
-#define CTRL_REG 3
-#define ST_REG 4
+#define ADDR_REG_OFFSET 0
+#define CTRL_REG_OFFSET 1
+#define STAT_REG_OFFSET 2
 
 volatile static uint32_t *shm = (SPECSITF_START_ADDRESS);
 
+static uint32_t test_addr __attribute__((aligned(4), section(".ram")));
+
 int main(int argc, char *argv[]) {
-  shm[INPUT_REG1] = 2;
-  shm[INPUT_REG2] = 2;
+  uint32_t expected_value = 42;
 
-  shm[CTRL_REG] = 1;
+  /* set input address */
+  shm[ADDR_REG_OFFSET] = (uint32_t)&test_addr;
 
-  printf("BEFORE WHILE LOOP, ST_REG: %d\n", shm[ST_REG]);
-  while ((shm[ST_REG] & 2) != 0) {
-    printf("IN WHILE LOOP, ST_REG: %d\n", shm[ST_REG]);
-  }
+  /* assert CTRL, invoke accelerator */
+  shm[CTRL_REG_OFFSET] = 1;
 
-  printf("after while loop\n");
-  uint32_t result = shm[OUTPUT_REG1];
+  /* poll until completion */
+  while (shm[STAT_REG_OFFSET] != 2);
 
-  shm[CTRL_REG] = 0;
+  /* deassert CTRL */
+  shm[CTRL_REG_OFFSET] = 0;
 
-  printf("Result: %d\n", result);
+  if (expected_value == test_addr) 
+    printf("%d,%d\n", expected_value, test_addr);
 
   return EXIT_SUCCESS;
 }

@@ -12,7 +12,7 @@
 static cipc **specsitf_server = NULL;
 
 void specsitf_comm_init() {
-  specsitf_server = (cipc**)malloc(sizeof(cipc*));
+  specsitf_server = (cipc **)malloc(sizeof(cipc *));
   if (!specsitf_server) {
     printf("Failed to allocate memory for server!\n");
 
@@ -28,7 +28,8 @@ void specsitf_comm_init() {
 
   cipc_zmq_config *config = cipc_zmq_config_req(SPECSITF_ADDRESS);
 
-  if ((*specsitf_server)->init(&(*specsitf_server)->context, config) != CIPC_OK) {
+  if ((*specsitf_server)->init(&(*specsitf_server)->context, config) !=
+      CIPC_OK) {
     printf("Failed to initialize server!\n");
 
     specsitf_comm_free();
@@ -48,24 +49,33 @@ void specsitf_comm_free() {
   }
 }
 
-void specsitf_comm_send(int reg1, int reg2, int ctrl) {
-  char buffer[SPECSITF_BUFFER_SIZE] = {0};
+void specsitf_comm_send(int addr, int ctrl, int obi_gnt, int obi_rvalid, int obi_rdata) {
+    char buffer[SPECSITF_BUFFER_SIZE] = {0};
+    size_t length = snprintf(buffer, sizeof(buffer),
+                             "addr=%d ctrl=%d obi_gnt=%d obi_rvalid=%d obi_rdata=%d",
+                             addr, ctrl, obi_gnt, obi_rvalid, obi_rdata);
 
-  size_t length = snprintf(buffer, sizeof(buffer), "reg1=%d reg2=%d ctrl=%d", reg1, reg2, ctrl);
-
-  if ((*specsitf_server)->send((*specsitf_server)->context, buffer, length) != CIPC_OK) {
-    printf("Failed to send reply!\n");
-  } else {
-    printf("Sent: reg1=%d reg2=%d ctrl=%d\n", reg1, reg2, ctrl);
-  }
+    if ((*specsitf_server)->send((*specsitf_server)->context, buffer, length) != CIPC_OK) {
+        printf("DPI-C Send: Failed to send reply!\n");
+    } else {
+        printf("DPI-C Send: %s\n", buffer); // <-- ADD THIS
+    }
 }
 
-void specsitf_comm_recv(int *reg3, int *st) {
-  char buffer[SPECSITF_BUFFER_SIZE] = { 0 };
+void specsitf_comm_recv(int *st, int *mem_req_type, int *mem_req_addr, int *mem_req_wdata) {
+    char buffer[SPECSITF_BUFFER_SIZE] = { 0 };
 
-  if ((*specsitf_server)->recv((*specsitf_server)->context, buffer, sizeof(buffer)) != CIPC_OK)
-    printf("Failed to receive message!\n");
+    if ((*specsitf_server)->recv((*specsitf_server)->context, buffer, sizeof(buffer)) != CIPC_OK)
+        printf("DPI-C Recv: Failed to receive message!\n");
 
-  if (sscanf(buffer, "reg3=%d st=%d", reg3, st) != 2)
-    printf("Failed to parse received data!\n");
+    if (sscanf(buffer, "st=%d mem_req_type=%d mem_req_addr=%d mem_req_wdata=%d",
+               st, mem_req_type, mem_req_addr, mem_req_wdata) != 4) {
+        printf("DPI-C Recv: Failed to parse received data! Buffer: %s\n", buffer); // <-- IMPROVE THIS
+        *st = 0;
+        *mem_req_type = 0;
+        *mem_req_addr = 0;
+        *mem_req_wdata = 0;
+    } else {
+        printf("DPI-C Recv: %s\n", buffer); // <-- ADD THIS
+    }
 }
