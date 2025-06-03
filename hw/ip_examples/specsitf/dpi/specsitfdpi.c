@@ -58,7 +58,7 @@ void specsitf_comm_send(int addr, int ctrl, int obi_gnt, int obi_rvalid, int obi
     if ((*specsitf_server)->send((*specsitf_server)->context, buffer, length) != CIPC_OK) {
         printf("DPI-C Send: Failed to send reply!\n");
     } else {
-        printf("DPI-C Send: %s\n", buffer); // <-- ADD THIS
+        printf("DPI-C Send: %s\n", buffer); 
     }
 }
 
@@ -70,12 +70,12 @@ void specsitf_comm_recv(int *st, int *mem_req_type, int *mem_req_addr, int *mem_
 
     if (sscanf(buffer, "st=%d mem_req_type=%d mem_req_addr=%d mem_req_wdata=%d",
                st, mem_req_type, mem_req_addr, mem_req_wdata) != 4) {
-        printf("DPI-C Recv: Failed to parse received data! Buffer: %s\n", buffer); // <-- IMPROVE THIS
+        printf("DPI-C Recv: Failed to parse received data! Buffer: %s\n", buffer); 
         *st = 0;
         *mem_req_type = 0;
         *mem_req_addr = 0;
         *mem_req_wdata = 0;
     } else {
-        printf("DPI-C Recv: %s\n", buffer); // <-- ADD THIS
+        printf("DPI-C Recv: %s\n", buffer); 
     }
 }
