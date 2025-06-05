@@ -1,4 +1,3 @@
-// specsitf.sv (Corrected)
 module specsitf #(
     parameter type reg_req_t  = logic,
     parameter type reg_rsp_t  = logic,
@@ -11,31 +10,48 @@ module specsitf #(
     input  reg_req_t reg_req_i,
     output reg_rsp_t reg_rsp_o,
 
-    output obi_req_t  obi_req_o,
-    input  obi_resp_t obi_resp_i
+    output obi_req_t  read_channel_req_o,
+    input  obi_resp_t read_channel_resp_i,
+
+    output obi_req_t  write_channel_req_o,
+    input  obi_resp_t write_channel_resp_i
 );
 
-  logic [31:0] addr, ctrl = '0, st = '0;
+  /* mandatory registers that control the state of the CPU and simulator */
+  logic [31:0] control = '0, status = '0;
 
-  /* OBI registers managed by the accelerator; in this scenario, the accelerator acts as the bus master */
-  logic [31:0] acc_mem_req_type;
-  logic [31:0] acc_mem_req_addr;
-  logic [31:0] acc_mem_req_wdata;
+  /* user registers exposed through MMIO */
+  logic [31:0] read_address, write_address, threshold, data_size;
+
+  /* OBI registers managed by the accelerator for read requests */
+  logic [31:0] read_channel_req_type;
+  logic [31:0] read_channel_req_addr;
+
+  /* OBI registers managed by the accelerator for write requests */
+  logic [31:0] write_channel_req_type;
+  logic [31:0] write_channel_req_addr;
+  logic [31:0] write_channel_req_data;
 
   import "DPI-C" function void specsitf_comm_init();
   import "DPI-C" function void specsitf_comm_free();
   import "DPI-C" function void specsitf_comm_send(
-    int addr,
-    int ctrl,
-    int obi_gnt,
-    int obi_rvalid,
-    int obi_rdata
+    int read_address,
+    int write_address,
+    int threshold,
+    int data_size,
+    int control,
+    int read_req_gnt,
+    int read_req_rvalid,
+    int read_req_rdata,
+    int write_req_gnt
   );
   import "DPI-C" function void specsitf_comm_recv(
     output int st,
-    output int mem_req_type,
-    output int mem_req_addr,
-    output int mem_req_wdata
+    output int read_channel_req_type,
+    output int read_channel_req_addr,
+    output int write_channel_req_type,
+    output int write_channel_req_addr,
+    output int write_channel_req_data
   );
 
   initial begin
@@ -45,90 +61,130 @@ module specsitf #(
     specsitf_comm_free();
   end
 
-  /* memory-mapped register write logic (Host to Accelerator) */
+  /* MM register write logic (host to accelerator) */
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
-      addr <= '0;
-      ctrl <= '0;
+      read_address <= '0;
+      write_address <= '0;
+      threshold <= '0;
+      data_size <= '0;
+      control <= '0;
     end else if (reg_req_i.valid && reg_req_i.write) begin
       case (reg_req_i.addr[7:2])
         0: begin
-          addr <= reg_req_i.wdata;
-          $display("[%0t] Verilog: Host wrote addr=%h (Reg 0)", $time, reg_req_i.wdata);
+          read_address <= reg_req_i.wdata;
         end
         1: begin
-          ctrl <= reg_req_i.wdata;
-          $display("[%0t] Verilog: Host wrote ctrl=%h (Reg 1)", $time, reg_req_i.wdata);
+          write_address <= reg_req_i.wdata;
         end
-        default:
-        $display("[%0t] Verilog: Host wrote to invalid Reg %h", $time, reg_req_i.addr[7:2]);
+        2: begin
+          threshold <= reg_req_i.wdata;
+        end
+        3: begin
+          data_size <= reg_req_i.wdata;
+        end
+        4: begin
+          control <= reg_req_i.wdata;
+        end
+        default: $display("[%0t] Verilog-MMIO-WRITE: Invalid Reg %h", $time, reg_req_i.addr[7:2]);
       endcase
     end
   end
 
-  /* memory-mapped register read logic (Host from Accelerator) */
+  /* MM register read logic (host from accelerator) */
   always_comb begin
     reg_rsp_o = '{ready: 1'b1, error: 1'b0, rdata: '0};
 
     if (reg_req_i.valid && !reg_req_i.write) begin
       case (reg_req_i.addr[7:2])
-        0: reg_rsp_o.rdata = addr;
-        1: reg_rsp_o.rdata = ctrl;
-        2: reg_rsp_o.rdata = st;  // Host reads st at offset 2
+        5: reg_rsp_o.rdata = status;
         default: reg_rsp_o.error = 1'b1;
       endcase
-      // $display("[%0t] Verilog: Host read Reg %h, rdata=%h", $time, reg_req_i.addr[7:2], reg_rsp_o.rdata); // Excessive logging
     end
   end
 
   /* DPI-C interface call and internal OBI request register updates */
   always_ff @(posedge clk_i or negedge rst_ni) begin
-    int tmp_st, tmp_mem_req_type, tmp_mem_req_addr, tmp_mem_req_wdata;
+    int _status;
+    int _read_channel_req_type, _read_channel_req_addr;
+    int _write_channel_req_type, _write_channel_req_addr, _write_channel_req_data;
 
     if (!rst_ni) begin
-      st <= '0;
-      acc_mem_req_type <= '0;
-      acc_mem_req_addr <= '0;
-      acc_mem_req_wdata <= '0;
+      status <= '0;
+
+      read_channel_req_type <= '0;
+      read_channel_req_addr <= '0;
+
+      write_channel_req_type <= '0;
+      write_channel_req_addr <= '0;
+      write_channel_req_data <= '0;
+
+      $display("[%0t] Verilog-DPI: Reset asserted. All DPI outputs reset.", $time);
     end else begin
-      // Send current inputs to Java (previous cycle's OBI response)
-      specsitf_comm_send(addr,  // Value of addr register from host
-                         ctrl,  // Value of ctrl register from host
-                         {31'b0, obi_resp_i.gnt},  /* cast gnt to 32-bit    */
-                         {31'b0, obi_resp_i.rvalid},  /* cast rvalid to 32-bit */
-                         obi_resp_i.rdata);
 
-      // Receive outputs from Java (Java's decision for current cycle's OBI request and status)
-      specsitf_comm_recv(tmp_st, tmp_mem_req_type, tmp_mem_req_addr, tmp_mem_req_wdata);
+      // Log inputs to DPI-C before sending
+      // $display(
+      //     "[%0t] Verilog-DPI-SEND-INPUTS: addr=%h, ctrl=%h, read_gnt=%0d, read_rvalid=%0d, read_rdata=%h, write_gnt=%0d",
+      //     $time, address, control, read_channel_resp_i.gnt, read_channel_resp_i.rvalid,
+      //     read_channel_resp_i.rdata, write_channel_resp_i.gnt);
 
-      // Update internal status register from Java
-      st <= tmp_st;
+      /* send outputs to simulator (Java) */
+      specsitf_comm_send(read_address, write_address, threshold, data_size, control, {
+                         31'b0, read_channel_resp_i.gnt}, {31'b0, read_channel_resp_i.rvalid},
+                         read_channel_resp_i.rdata, {31'b0, write_channel_resp_i.gnt});
 
-      // Update internal OBI request registers from Java.
-      // These are then used by the 'assign' statements below to drive OBI.
-      acc_mem_req_type <= tmp_mem_req_type;
-      acc_mem_req_addr <= tmp_mem_req_addr;
-      acc_mem_req_wdata <= tmp_mem_req_wdata;
+      /* recv outputs from simulator (Java) */
+      specsitf_comm_recv(_status, _read_channel_req_type, _read_channel_req_addr,
+                         _write_channel_req_type, _write_channel_req_addr, _write_channel_req_data);
+
+      // Log raw outputs received from DPI-C before registering
+      $display(
+          "[%0t] Verilog-DPI-RECV-RAW: _status=%0d, _read_type=%0d, _read_addr=%h, _write_type=%0d, _write_addr=%h, _write_data=%h",
+          $time, _status, _read_channel_req_type, _read_channel_req_addr, _write_channel_req_type,
+          _write_channel_req_addr, _write_channel_req_data);
+
+      status <= _status;
+
+      read_channel_req_type <= _read_channel_req_type;
+      read_channel_req_addr <= _read_channel_req_addr;
+
+      write_channel_req_type <= _write_channel_req_type;
+      write_channel_req_addr <= _write_channel_req_addr;
+      write_channel_req_data <= _write_channel_req_data;
+
+      // Log values of registered internal signals (which will drive OBI outputs next cycle)
+      $display(
+          "[%0t] Verilog-DPI-REGISTERED: status=%0d, read_type=%0d, read_addr=%h, write_type=%0d, write_addr=%h, write_data=%h",
+          $time, status, read_channel_req_type, read_channel_req_addr, write_channel_req_type,
+          write_channel_req_addr, write_channel_req_data);
     end
   end
 
-  /* output OBI signals - driven by internal registers, continuous assignment */
-  // These assignments MUST be continuous to hold 'req' high as long as Java wants it.
-  assign obi_req_o.req = (acc_mem_req_type == 1 || acc_mem_req_type == 2);  // Correct!
-  assign obi_req_o.we = (acc_mem_req_type == 2);  // Correct!
-  assign obi_req_o.be = 4'b1111;  // Correct!
-  assign obi_req_o.addr = acc_mem_req_addr;  // Correct!
-  assign obi_req_o.wdata = acc_mem_req_wdata;  // Correct!
+  /* assign read channel signals */
+  assign read_channel_req_o.req = (read_channel_req_type == 1);
+  assign read_channel_req_o.we = 0;
+  assign read_channel_req_o.be = 4'b1111;
+  assign read_channel_req_o.addr = read_channel_req_addr;
+  assign read_channel_req_o.wdata = 0;
 
-  // Debugging OBI signals
+  /* assign write channel signals (Still has the bug, please fix this for correct write operation!) */
+  assign write_channel_req_o.req = (write_channel_req_type == 1);
+  assign write_channel_req_o.we = 1;
+  assign write_channel_req_o.be = 4'b1111;
+  assign write_channel_req_o.addr = write_channel_req_addr;
+  assign write_channel_req_o.wdata = write_channel_req_data;
+
   always @(posedge clk_i) begin
     if (rst_ni) begin
       $display(
-          "[%0t] Verilog OBI_OUT: req=%b, we=%b, addr=%h, wdata=%h (From Java: type=%0d, addr=%h, wdata=%h)",
-          $time, obi_req_o.req, obi_req_o.we, obi_req_o.addr, obi_req_o.wdata, acc_mem_req_type,
-          acc_mem_req_addr, acc_mem_req_wdata);
-      $display("[%0t] Verilog OBI_IN : gnt=%b, rvalid=%b, rdata=%h", $time, obi_resp_i.gnt,
-               obi_resp_i.rvalid, obi_resp_i.rdata);
+          "[%0t] Verilog-OBI-OUT: READ_REQ: req=%0d, we=%0d, addr=%h | READ_RESP_IN: gnt=%0d, rvalid=%0d, rdata=%h",
+          $time, read_channel_req_o.req, read_channel_req_o.we, read_channel_req_o.addr,
+          read_channel_resp_i.gnt, read_channel_resp_i.rvalid, read_channel_resp_i.rdata);
+
+      $display(
+          "[%0t] Verilog-OBI-OUT: WRITE_REQ: req=%0d, we=%0d, addr=%h, wdata=%h | WRITE_RESP_IN: gnt=%0d",
+          $time, write_channel_req_o.req, write_channel_req_o.we, write_channel_req_o.addr,
+          write_channel_req_o.wdata, write_channel_resp_i.gnt);
     end
   end
 

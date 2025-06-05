@@ -331,7 +331,7 @@ int main(int argc, char *argv[]) {
                         if (data[i] != data_odd) {
                                 PRINTF("ERROR left sample %d (B%d) = 0x%08x != 0x%08x\r\n\r", i, batch, data[i], data_odd);
                                 success = false;
-                        }
+                        } 
                     }
                     else {
                         //even

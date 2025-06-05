@@ -183,7 +183,7 @@ app-compile-all:
 
 ## Verilator simulation with C++
 verilator-sim:
-	$(FUSESOC) --cores-root . run --no-export --target=sim --tool=verilator $(FUSESOC_FLAGS) --build openhwgroup.org:systems:core-v-mini-mcu ${FUSESOC_PARAM} --verilator_options "-LDFLAGS \"-lcipc -lzmq\"" 2>&1 | tee buildsim.log
+	$(FUSESOC) --cores-root . run --no-export --target=sim --tool=verilator $(FUSESOC_FLAGS) --build openhwgroup.org:systems:core-v-mini-mcu ${FUSESOC_PARAM} --verilator_options "-LDFLAGS \"-lcipc -lzmq -lmsgpack-c\"" 2>&1 | tee buildsim.log
 
 ## Verilator simulation with SystemC
 verilator-sim-sc:

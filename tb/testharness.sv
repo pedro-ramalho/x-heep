@@ -532,10 +532,12 @@ module testharness #(
       ) specsitf_i (
           .clk_i,
           .rst_ni,
-          .reg_req_i (ext_periph_slv_req[testharness_pkg::SPECSITF_IDX]),
-          .reg_rsp_o (ext_periph_slv_rsp[testharness_pkg::SPECSITF_IDX]),
-          .obi_req_o (ext_master_req[testharness_pkg::EXT_MASTER2_IDX]),
-          .obi_resp_i(ext_master_resp[testharness_pkg::EXT_MASTER2_IDX])
+          .reg_req_i(ext_periph_slv_req[testharness_pkg::SPECSITF_IDX]),
+          .reg_rsp_o(ext_periph_slv_rsp[testharness_pkg::SPECSITF_IDX]),
+          .read_channel_req_o(ext_master_req[testharness_pkg::EXT_MASTER2_IDX]),
+          .read_channel_resp_i(ext_master_resp[testharness_pkg::EXT_MASTER2_IDX]),
+          .write_channel_req_o(ext_master_req[testharness_pkg::EXT_MASTER3_IDX]),
+          .write_channel_resp_i(ext_master_resp[testharness_pkg::EXT_MASTER3_IDX])
       );
 
       im2col_spc im2col_spc_i (
